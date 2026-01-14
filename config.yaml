@@ -1,0 +1,31 @@
+# VoiceSlice 配置文件
+
+# WebUI 配置
+webui:
+  host: "0.0.0.0"
+  port: 7860
+  share: false  # 是否创建公共链接
+
+# 音频切片默认参数
+slicer:
+  threshold: -34  # 音量阈值（dB）
+  min_length: 4000  # 每段最小长度（毫秒）
+  min_interval: 300  # 最短切割间隔（毫秒）
+  hop_size: 10  # 帧长度（毫秒）
+  max_sil_kept: 500  # 切完后静音最多保留长度（毫秒）
+  max: 0.9  # 归一化后最大值
+  alpha: 0.25  # 混音比例
+
+# ASR 默认配置
+asr:
+  default_model: "Faster Whisper (多语种)"  # 默认 ASR 模型
+  default_language: "auto"  # 默认语言（auto 表示自动检测）
+  default_precision: "float16"  # 默认精度
+  default_model_size: "large-v3"  # Faster Whisper 默认模型尺寸
+
+# 路径配置
+paths:
+  output_dir: "output"  # 输出目录
+  models_dir: "models/asr"  # 模型存储目录
+  slice_output: "output/slicer_opt"  # 切片输出目录
+  asr_output: "output/asr_opt"  # ASR 输出目录
