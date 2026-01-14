@@ -85,7 +85,7 @@ def create_model(language="zh"):
         return model
 
 
-def execute_asr(input_folder, output_folder, model_size="large", language="zh"):
+def execute_asr(input_folder, output_folder, model_size="large", language="zh", output_mode=None):
     """
     执行 FunASR ASR 识别
     
@@ -94,10 +94,13 @@ def execute_asr(input_folder, output_folder, model_size="large", language="zh"):
         output_folder: 输出文件夹
         model_size: 模型尺寸（FunASR 固定为 large）
         language: 语言代码（zh 或 yue）
+        output_mode: 输出方式列表，可选值：["list"], ["txt"], ["list", "txt"]，默认为 ["list"]
         
     Returns:
-        输出文件路径
+        输出文件路径（如果output_mode包含"list"则返回list文件路径，否则返回None）
     """
+    if output_mode is None:
+        output_mode = ["list"]
     input_file_names = [f for f in os.listdir(input_folder) if f.lower().endswith(('.wav', '.mp3', '.m4a', '.flac'))]
     input_file_names.sort()
 
@@ -111,15 +114,37 @@ def execute_asr(input_folder, output_folder, model_size="large", language="zh"):
             print(f"\n{file_name}")
             file_path = os.path.join(input_folder, file_name)
             text = model.generate(input=file_path)[0]["text"]
-            output.append(f"{file_path}|{output_file_name}|{language.upper()}|{text}")
+            
+            # 如果选择了list输出方式，添加到输出列表
+            if "list" in output_mode:
+                output.append(f"{file_path}|{output_file_name}|{language.upper()}|{text}")
+            
+            # 如果选择了txt输出方式，在音频文件同目录生成同名txt文件
+            if "txt" in output_mode:
+                try:
+                    audio_dir = os.path.dirname(file_path)
+                    audio_name_without_ext = os.path.splitext(file_name)[0]
+                    txt_file_path = os.path.join(audio_dir, f"{audio_name_without_ext}.txt")
+                    
+                    with open(txt_file_path, "w", encoding="utf-8") as txt_f:
+                        txt_f.write(text)
+                except Exception as e:
+                    print(f"Error writing txt file for {file_name}: {e}")
+                    traceback.print_exc()
         except Exception as e:
             print(f"Error processing {file_name}: {traceback.format_exc()}")
 
-    output_folder = output_folder or "output/asr_opt"
-    os.makedirs(output_folder, exist_ok=True)
-    output_file_path = os.path.abspath(os.path.join(output_folder, f"{output_file_name}.list"))
+    # 如果选择了list输出方式，生成list文件
+    output_file_path = None
+    if "list" in output_mode:
+        output_folder = output_folder or "output/asr_opt"
+        os.makedirs(output_folder, exist_ok=True)
+        output_file_path = os.path.abspath(os.path.join(output_folder, f"{output_file_name}.list"))
 
-    with open(output_file_path, "w", encoding="utf-8") as f:
-        f.write("\n".join(output))
-        print(f"ASR 任务完成->标注文件路径: {output_file_path}\n")
+        with open(output_file_path, "w", encoding="utf-8") as f:
+            f.write("\n".join(output))
+            print(f"ASR 任务完成->标注文件路径: {output_file_path}\n")
+    else:
+        print(f"ASR 任务完成（已生成txt文件）\n")
+    
     return output_file_path

@@ -45,6 +45,7 @@ DEFAULT_ASR_CONFIG = config.get("asr", {
     "default_language": "auto",
     "default_precision": "float16",
     "default_model_size": "large-v3",
+    "default_output_mode": ["list"],
 })
 
 OUTPUT_DIR = config.get("paths", {}).get("output_dir", "output")
@@ -107,6 +108,7 @@ def process_asr(
     language,
     model_size,
     precision,
+    output_mode,
     progress=gr.Progress(),
 ):
     """处理 ASR 识别"""
@@ -127,6 +129,7 @@ def process_asr(
                 output_folder=output_dir,
                 model_size="large",
                 language=language,
+                output_mode=output_mode,
             )
         else:  # Faster Whisper
             result_path = fasterwhisper_asr(
@@ -135,12 +138,14 @@ def process_asr(
                 model_size=model_size,
                 language=language,
                 precision=precision,
+                output_mode=output_mode,
             )
         
         progress(1.0, desc="识别完成")
         
-        # 读取结果文件
-        if os.path.exists(result_path):
+        # 读取结果文件（如果生成了list文件）
+        result_text = "识别完成！"
+        if result_path and os.path.exists(result_path):
             with open(result_path, "r", encoding="utf-8") as f:
                 results = f.read().strip().split("\n")
             
@@ -152,9 +157,16 @@ def process_asr(
             if len(results) > 10:
                 result_text += f"\n... 还有 {len(results) - 10} 条结果\n"
             
+            if "txt" in output_mode:
+                result_text += "\n已生成txt文件到音频同目录"
+            
             return result_text, result_path
         else:
-            return "识别完成，但结果文件未找到", None
+            if "txt" in output_mode:
+                result_text = "识别完成！已生成txt文件到音频同目录"
+            else:
+                result_text = "识别完成，但结果文件未找到"
+            return result_text, None
             
     except Exception as e:
         import traceback
@@ -169,6 +181,7 @@ def process_full_pipeline(
     language,
     model_size,
     precision,
+    output_mode,
     threshold,
     min_length,
     min_interval,
@@ -223,6 +236,7 @@ def process_full_pipeline(
             language=language,
             model_size=model_size,
             precision=precision,
+            output_mode=output_mode,
             progress=asr_progress,
         )
         
@@ -357,6 +371,13 @@ def create_interface():
                             visible=True,
                         )
                         
+                        asr_output_mode = gr.CheckboxGroup(
+                            label="输出方式",
+                            choices=["list", "txt"],
+                            value=DEFAULT_ASR_CONFIG["default_output_mode"],
+                            info="list: 在输出目录生成.list文件；txt: 在音频同目录生成同名.txt文件",
+                        )
+                        
                         asr_button = gr.Button("开始识别", variant="primary")
                     
                     with gr.Column(scale=1):
@@ -451,6 +472,12 @@ def create_interface():
                                 choices=["float32", "float16", "int8"],
                                 value=DEFAULT_ASR_CONFIG["default_precision"],
                             )
+                            pipeline_output_mode = gr.CheckboxGroup(
+                                label="输出方式",
+                                choices=["list", "txt"],
+                                value=DEFAULT_ASR_CONFIG["default_output_mode"],
+                                info="list: 在输出目录生成.list文件；txt: 在音频同目录生成同名.txt文件",
+                            )
                         
                         pipeline_button = gr.Button("开始处理", variant="primary", size="lg")
                     
@@ -495,6 +522,7 @@ def create_interface():
                 asr_language,
                 asr_model_size,
                 asr_precision,
+                asr_output_mode,
             ],
             outputs=[asr_result, asr_output_path],
         )
@@ -509,6 +537,7 @@ def create_interface():
                 pipeline_language,
                 pipeline_model_size,
                 pipeline_precision,
+                pipeline_output_mode,
                 pipeline_threshold,
                 pipeline_min_length,
                 pipeline_min_interval,

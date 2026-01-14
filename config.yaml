@@ -22,6 +22,7 @@ asr:
   default_language: "auto"  # 默认语言（auto 表示自动检测）
   default_precision: "float16"  # 默认精度
   default_model_size: "large-v3"  # Faster Whisper 默认模型尺寸
+  default_output_mode: ["list"]  # 默认输出方式，支持 ["list"], ["txt"], ["list", "txt"]
 
 # 路径配置
 paths:
