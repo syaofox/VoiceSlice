@@ -161,11 +161,23 @@ def process_asr(
             
             if "txt" in output_mode:
                 result_text += "\n已生成txt文件到音频同目录"
+            if "jsonl" in output_mode:
+                jsonl_file_path = os.path.join(output_dir, f"{os.path.basename(input_folder)}.jsonl")
+                if os.path.exists(jsonl_file_path):
+                    result_text += f"\n已生成jsonl文件: {jsonl_file_path}"
             
             return result_text, result_path
         else:
+            output_parts = []
             if "txt" in output_mode:
-                result_text = "识别完成！已生成txt文件到音频同目录"
+                output_parts.append("已生成txt文件到音频同目录")
+            if "jsonl" in output_mode:
+                jsonl_file_path = os.path.join(output_dir, f"{os.path.basename(input_folder)}.jsonl")
+                if os.path.exists(jsonl_file_path):
+                    output_parts.append(f"已生成jsonl文件: {jsonl_file_path}")
+            
+            if output_parts:
+                result_text = "识别完成！" + "；".join(output_parts)
             else:
                 result_text = "识别完成，但结果文件未找到"
             return result_text, None
@@ -378,9 +390,9 @@ def create_interface():
                         
                         asr_output_mode = gr.CheckboxGroup(
                             label="输出方式",
-                            choices=["list", "txt"],
+                            choices=["list", "txt", "jsonl"],
                             value=DEFAULT_ASR_CONFIG["default_output_mode"],
-                            info="list: 在输出目录生成.list文件；txt: 在音频同目录生成同名.txt文件",
+                            info="list: 在输出目录生成.list文件；txt: 在音频同目录生成同名.txt文件；jsonl: 在输出目录生成.jsonl文件（每行一个JSON对象，包含audio、text、duration字段）",
                         )
                         
                         asr_button = gr.Button("开始识别", variant="primary")
@@ -479,9 +491,9 @@ def create_interface():
                             )
                             pipeline_output_mode = gr.CheckboxGroup(
                                 label="输出方式",
-                                choices=["list", "txt"],
+                                choices=["list", "txt", "jsonl"],
                                 value=DEFAULT_ASR_CONFIG["default_output_mode"],
-                                info="list: 在输出目录生成.list文件；txt: 在音频同目录生成同名.txt文件",
+                                info="list: 在输出目录生成.list文件；txt: 在音频同目录生成同名.txt文件；jsonl: 在输出目录生成.jsonl文件（每行一个JSON对象，包含audio、text、duration字段）",
                             )
                         
                         pipeline_button = gr.Button("开始处理", variant="primary", size="lg")

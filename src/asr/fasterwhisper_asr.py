@@ -1,5 +1,6 @@
 """Faster Whisper ASR 实现"""
 
+import json
 import os
 import time
 import traceback
@@ -19,6 +20,7 @@ except ImportError:
 
 from .config import get_models
 from .funasr_asr import only_asr
+from ..utils.audio_utils import get_audio_duration
 
 # fmt: off
 language_code_list = [
@@ -133,6 +135,7 @@ def execute_asr(input_folder, output_folder, model_size="large-v3", language="au
     input_file_names.sort()
 
     output = []
+    jsonl_output = []
     output_file_name = os.path.basename(input_folder)
 
     for file_name in tqdm(input_file_names, desc="Transcribing"):
@@ -158,6 +161,19 @@ def execute_asr(input_folder, output_folder, model_size="large-v3", language="au
             # 如果选择了list输出方式，添加到输出列表
             if "list" in output_mode:
                 output.append(f"{file_path}|{output_file_name}|{info.language.upper()}|{text}")
+            
+            # 如果选择了jsonl输出方式，添加到jsonl输出列表
+            if "jsonl" in output_mode:
+                try:
+                    duration = get_audio_duration(file_path)
+                    jsonl_output.append({
+                        "audio": file_path,
+                        "text": text,
+                        "duration": round(duration, 1)
+                    })
+                except Exception as e:
+                    print(f"Error getting duration for {file_name}: {e}")
+                    traceback.print_exc()
             
             # 如果选择了txt输出方式，在音频文件同目录生成同名txt文件
             if "txt" in output_mode:
@@ -185,7 +201,20 @@ def execute_asr(input_folder, output_folder, model_size="large-v3", language="au
         with open(output_file_path, "w", encoding="utf-8") as f:
             f.write("\n".join(output))
             print(f"ASR 任务完成->标注文件路径: {output_file_path}\n")
-    else:
+    
+    # 如果选择了jsonl输出方式，生成jsonl文件
+    jsonl_file_path = None
+    if "jsonl" in output_mode:
+        output_folder = output_folder or "output/asr_opt"
+        os.makedirs(output_folder, exist_ok=True)
+        jsonl_file_path = os.path.abspath(os.path.join(output_folder, f"{output_file_name}.jsonl"))
+
+        with open(jsonl_file_path, "w", encoding="utf-8") as f:
+            for item in jsonl_output:
+                f.write(json.dumps(item, ensure_ascii=False) + "\n")
+            print(f"ASR 任务完成->JSONL文件路径: {jsonl_file_path}\n")
+    
+    if "list" not in output_mode and "jsonl" not in output_mode:
         print(f"ASR 任务完成（已生成txt文件）\n")
     
     return output_file_path

@@ -56,3 +56,34 @@ def load_audio(file: str, sr: int) -> np.ndarray:
         raise RuntimeError("音频加载失败")
 
     return np.frombuffer(out, np.float32).flatten()
+
+
+def get_audio_duration(file: str) -> float:
+    """
+    获取音频文件时长（秒）
+    
+    Args:
+        file: 音频文件路径
+        
+    Returns:
+        音频时长（秒，浮点数）
+        
+    Raises:
+        RuntimeError: 无法获取音频时长
+    """
+    try:
+        file = clean_path(file)
+        if os.path.exists(file) is False:
+            raise RuntimeError(f"音频文件不存在: {file}")
+        
+        probe = ffmpeg.probe(file)
+        # 优先从format获取时长，如果没有则从streams获取
+        if 'format' in probe and 'duration' in probe['format']:
+            duration = float(probe['format']['duration'])
+        elif 'streams' in probe and len(probe['streams']) > 0 and 'duration' in probe['streams'][0]:
+            duration = float(probe['streams'][0]['duration'])
+        else:
+            raise RuntimeError("无法从音频文件中找到时长信息")
+        return duration
+    except Exception as e:
+        raise RuntimeError(f"无法获取音频时长: {str(e)}")
