@@ -124,6 +124,8 @@ def process_asr(
         progress(0, desc="开始识别...")
         
         if asr_model == "达摩 ASR (中文)":
+            # 达摩模型只支持中文，强制设置为 zh
+            language = "zh"
             result_path = funasr_asr(
                 input_folder=input_folder,
                 output_folder=output_dir,
@@ -229,6 +231,9 @@ def process_full_pipeline(
         # 步骤2：识别
         progress(0.6, desc="步骤 2/2: 文本识别...")
         asr_progress = SimpleProgress(progress, 0.6, 0.95)
+        # 达摩模型只支持中文，强制设置为 zh
+        if asr_model == "达摩 ASR (中文)":
+            language = "zh"
         asr_result, asr_output = process_asr(
             input_folder=slice_output,
             output_dir=asr_output_dir,
@@ -552,6 +557,12 @@ def create_interface():
         # 根据模型选择更新语言选项
         def update_language_options(model_name):
             if model_name in asr_dict:
+                # 达摩模型只支持中文，强制设置为 zh
+                if model_name == "达摩 ASR (中文)":
+                    return {
+                        "choices": asr_dict[model_name]["lang"],
+                        "value": "zh"
+                    }
                 return {
                     "choices": asr_dict[model_name]["lang"],
                     "value": asr_dict[model_name]["lang"][0] if asr_dict[model_name]["lang"] else "auto"
